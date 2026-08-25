@@ -1,0 +1,23 @@
+{
+  "name": "visitor-pass-management-system",
+  "version": "1.0.0",
+  "description": "Production MERN Stack Visitor Pass Management System",
+  "main": "backend/server.js",
+  "scripts": {
+    "install-all": "npm install --prefix backend && npm install --prefix frontend",
+    "build": "npm install --prefix backend && npm install --prefix frontend && npm run build --prefix frontend",
+    "start": "node backend/server.js",
+    "server": "npm start --prefix backend",
+    "client": "npm run dev --prefix frontend"
+  },
+  "keywords": [
+    "mern",
+    "visitor-pass",
+    "react",
+    "express",
+    "mongodb",
+    "nodejs"
+  ],
+  "author": "",
+  "license": "ISC"
+}
