@@ -47,6 +47,7 @@ const PublicPreRegister = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  // 1. Visitor details bharne ke baad 6-digit Mock OTP generate karke Step 2 par le jana
   const handleSendOtp = (e) => {
     e.preventDefault();
     setError('');
@@ -54,12 +55,13 @@ const PublicPreRegister = () => {
       setError('Please fill in all required fields');
       return;
     }
-    // Simulate sending 6-digit OTP
+    // 6-digit random OTP code generate karna
     const mockCode = Math.floor(100000 + Math.random() * 900000).toString();
     setGeneratedOtp(mockCode);
     setStep(2);
   };
 
+  // 2. OTP code verify karna aur visit request backend API par submit karna
   const handleVerifyOtpAndSubmit = async (e) => {
     e.preventDefault();
     if (otp !== generatedOtp && otp !== '123456') {
@@ -71,9 +73,10 @@ const PublicPreRegister = () => {
     setError('');
 
     try {
+      // Backend par visit appointment create karna
       const res = await API.post('/appointments/public-register', formData);
       setSuccessResult(res.data.data);
-      setStep(3);
+      setStep(3); // Step 3: Success Confirmation Screen dikhana
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to submit pre-registration');
     } finally {

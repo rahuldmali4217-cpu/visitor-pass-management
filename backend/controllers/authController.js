@@ -1,25 +1,27 @@
+// User model aur JWT package import kar rahe hain
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-// Generate JWT Token
+// User ID se JWT secure token generate karne ka helper function (Valid for 30 days)
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || 'supersecretvisitorpasskey12345', {
     expiresIn: '30d'
   });
 };
 
-// @desc    Register a new user
-// @route   POST /api/auth/register
-// @access  Public
+// 1. Naye user ko register karna (Admin, Host, Security, ya Visitor)
+// POST /api/auth/register
 const registerUser = async (req, res) => {
   try {
     const { name, email, password, role, phone, department } = req.body;
 
+    // Check karo ki email pehle se registered toh nahi hai
     const userExists = await User.findOne({ email: email.toLowerCase() });
     if (userExists) {
       return res.status(400).json({ success: false, message: 'User with this email already exists' });
     }
 
+    // Naya user database me create karo
     const user = await User.create({
       name,
       email,
@@ -29,6 +31,7 @@ const registerUser = async (req, res) => {
       department: department || 'General'
     });
 
+    // Successfully register hone par user details aur token return karo
     res.status(201).json({
       success: true,
       data: {
@@ -46,9 +49,8 @@ const registerUser = async (req, res) => {
   }
 };
 
-// @desc    Auth user & get token
-// @route   POST /api/auth/login
-// @access  Public
+// 2. User Login API - Email aur Password verify karke JWT token dena
+// POST /api/auth/login
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -57,6 +59,7 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please provide email and password' });
     }
 
+    // Database me user find karo aur password match karo
     const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
 
     if (!user || !(await user.matchPassword(password))) {
@@ -67,6 +70,7 @@ const loginUser = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Your account has been deactivated' });
     }
 
+    // Login successful hone par JWT token return karo
     res.json({
       success: true,
       data: {
@@ -84,9 +88,8 @@ const loginUser = async (req, res) => {
   }
 };
 
-// @desc    Get current user profile
-// @route   GET /api/auth/me
-// @access  Private
+// 3. Logged-in user ki profile fetch karna
+// GET /api/auth/me
 const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
