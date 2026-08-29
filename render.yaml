@@ -1,10 +1,10 @@
 services:
   - type: web
-    name: visitor-pass-system
+    name: visitor-pass-management
     env: node
     plan: free
-    buildCommand: npm run build
-    startCommand: npm start
+    buildCommand: npm install && npm --prefix frontend install && npm --prefix frontend run build
+    startCommand: node backend/server.js
     envVars:
       - key: NODE_ENV
         value: production
