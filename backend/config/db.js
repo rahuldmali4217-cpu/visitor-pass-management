@@ -1,12 +1,16 @@
+// ==========================================
+// MongoDB Database Connection Setup
+// ==========================================
 const mongoose = require('mongoose');
 const dns = require('dns');
 
-// set public dns fallback for mongodb atlas SRV records
+// Atlas SRV DNS issue avoid karne ke liye Google DNS set karna
 try {
   dns.setServers(['8.8.8.8', '1.1.1.1']);
 } catch (e) {}
 
 const connectDB = async () => {
+  // .env se connection string lena, agar nahi hai toh local database use karna
   const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/visitor_pass_db';
 
   try {
@@ -14,7 +18,7 @@ const connectDB = async () => {
     console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`MongoDB connection error: ${error.message}`);
-    // fallback to in-memory db for local testing if installed
+    // Local testing me in-memory fallback
     try {
       const { MongoMemoryServer } = require('mongodb-memory-server');
       const mongoServer = await MongoMemoryServer.create();

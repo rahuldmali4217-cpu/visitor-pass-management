@@ -50,20 +50,21 @@ const PublicPreRegister = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // 1. Dispatch real OTP via Email & SMS backend endpoint
+  // 1. Visitor details bharne ke baad real OTP email aur phone par bhejna
   const handleSendOtp = async (e) => {
     e.preventDefault();
     setError('');
     setInfoMessage('');
 
     if (!formData.visitorName || !formData.visitorEmail || !formData.visitorPhone || !formData.hostId || !formData.purpose) {
-      setError('Please fill in all required fields');
+      setError('Sabhi required fields bharna zaroori hai');
       return;
     }
 
     setLoading(true);
 
     try {
+      // Backend send-otp API call karna
       const res = await API.post('/auth/send-otp', {
         email: formData.visitorEmail,
         phone: formData.visitorPhone,
@@ -72,20 +73,20 @@ const PublicPreRegister = () => {
 
       setEmailPreviewUrl(res.data.previewUrl || null);
       setDevOtpCode(res.data.devOtp || null);
-      setInfoMessage(`Verification code sent to ${formData.visitorEmail}`);
-      setStep(2);
+      setInfoMessage(`Verification code aapke email ${formData.visitorEmail} par bhej diya gaya hai`);
+      setStep(2); // Step 2 OTP verification screen par le jana
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to dispatch verification OTP. Please try again.');
+      setError(err.response?.data?.message || 'OTP bhejne me dikkat aayi. Kripya dobara try karein.');
     } finally {
       setLoading(false);
     }
   };
 
-  // 2. Verify OTP code with backend database & submit pre-registration
+  // 2. OTP verify karke visit request submit karna
   const handleVerifyOtpAndSubmit = async (e) => {
     e.preventDefault();
     if (!otp || otp.trim().length !== 6) {
-      setError('Please enter the valid 6-digit OTP code');
+      setError('Kripya 6-digit ka valid OTP code enter karein');
       return;
     }
 
@@ -93,7 +94,7 @@ const PublicPreRegister = () => {
     setError('');
 
     try {
-      // Step 2a: Verify OTP with backend
+      // Step 2a: Backend par OTP verify karna
       const verifyRes = await API.post('/auth/verify-otp', {
         email: formData.visitorEmail,
         otpCode: otp.trim()
@@ -102,16 +103,16 @@ const PublicPreRegister = () => {
       const token = verifyRes.data.verificationToken;
       setVerificationToken(token);
 
-      // Step 2b: Submit pre-registration appointment with verified token
+      // Step 2b: Verified token ke sath appointment create karna
       const apptRes = await API.post('/appointments/public-register', {
         ...formData,
         verificationToken: token
       });
 
       setSuccessResult(apptRes.data.data);
-      setStep(3);
+      setStep(3); // Step 3 Confirmation screen dikhana
     } catch (err) {
-      setError(err.response?.data?.message || 'OTP verification failed. Please enter the correct code or request a new one.');
+      setError(err.response?.data?.message || 'OTP verification fail ho gaya. Sahi code enter karein.');
     } finally {
       setLoading(false);
     }

@@ -1,39 +1,42 @@
+// ==========================================
+// Security Gate Check-In / Check-Out Controller
+// ==========================================
 const CheckLog = require('../models/CheckLog');
 const Pass = require('../models/Pass');
 const User = require('../models/User');
 const { sendHostArrivalAlert } = require('../utils/emailSender');
 const { sendSMS } = require('../utils/smsSender');
 
-// 1. process visitor check-in at gate
+// 1. Gate par Visitor ka Check-In process karna
 const processCheckIn = async (req, res) => {
   try {
     const { passCode, remarks } = req.body;
 
     if (!passCode) {
-      return res.status(400).json({ success: false, message: 'Pass code is required' });
+      return res.status(400).json({ success: false, message: 'Pass code enter karna zaroori hai' });
     }
 
     const cleanCode = passCode.trim().toUpperCase();
     const pass = await Pass.findOne({ passCode: cleanCode }).populate('host', 'name email phone department');
 
     if (!pass) {
-      return res.status(404).json({ success: false, message: 'Invalid Visitor Pass Code' });
+      return res.status(404).json({ success: false, message: 'Galat Visitor Pass Code' });
     }
 
     if (pass.status === 'REVOKED') {
-      return res.status(400).json({ success: false, message: 'Pass has been revoked' });
+      return res.status(400).json({ success: false, message: 'Ye pass cancel/revoke kar diya gaya hai' });
     }
 
-    // check if pass expired
+    // Expiry check
     const now = new Date();
     if (now > new Date(pass.validUntil)) {
       return res.status(400).json({
         success: false,
-        message: `Pass expired at ${new Date(pass.validUntil).toLocaleTimeString()}`
+        message: `Pass expire ho chuka hai (${new Date(pass.validUntil).toLocaleTimeString()})`
       });
     }
 
-    // check if already checked in
+    // Double check-in prevention (Agar visitor pehle se andar hai)
     const activeLog = await CheckLog.findOne({
       pass: pass._id,
       status: 'CHECKED_IN'
@@ -42,12 +45,13 @@ const processCheckIn = async (req, res) => {
     if (activeLog) {
       return res.status(400).json({
         success: false,
-        message: `Visitor is already checked in since ${new Date(activeLog.checkInTime).toLocaleTimeString()}`
+        message: `Visitor pehle se checked-in hai (${new Date(activeLog.checkInTime).toLocaleTimeString()})`
       });
     }
 
     const checkInTime = new Date();
 
+    // Entry record save karna
     const log = await CheckLog.create({
       pass: pass._id,
       passCode: pass.passCode,
@@ -59,7 +63,7 @@ const processCheckIn = async (req, res) => {
       remarks: remarks || 'Verified at Security Gate'
     });
 
-    // notify host by email & sms
+    // Host ko email aur SMS alert bhejna ki visitor pahunch chuka hai
     if (pass.host && pass.host.email) {
       sendHostArrivalAlert({
         hostEmail: pass.host.email,
@@ -73,39 +77,39 @@ const processCheckIn = async (req, res) => {
       if (pass.host.phone) {
         sendSMS({
           toPhone: pass.host.phone,
-          message: `Visitor Alert: ${pass.visitorName} (Pass: ${pass.passCode}) has checked in.`
+          message: `Visitor Alert: ${pass.visitorName} (Pass: ${pass.passCode}) gate par check-in ho chuka hai.`
         }).catch(err => console.error('Host alert sms error:', err.message));
       }
     }
 
     res.status(201).json({
       success: true,
-      message: `Check-in recorded for ${pass.visitorName}`,
+      message: `${pass.visitorName} ka check-in complete ho gaya`,
       data: log
     });
   } catch (error) {
-    console.error('Error in processCheckIn:', error.message);
+    console.error('processCheckIn error:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// 2. process visitor check-out at gate
+// 2. Gate par Visitor ka Check-Out process karna
 const processCheckOut = async (req, res) => {
   try {
     const { passCode, remarks } = req.body;
 
     if (!passCode) {
-      return res.status(400).json({ success: false, message: 'Pass code is required' });
+      return res.status(400).json({ success: false, message: 'Pass code enter karna zaroori hai' });
     }
 
     const cleanCode = passCode.trim().toUpperCase();
     const pass = await Pass.findOne({ passCode: cleanCode });
 
     if (!pass) {
-      return res.status(404).json({ success: false, message: 'Invalid Visitor Pass Code' });
+      return res.status(404).json({ success: false, message: 'Galat Visitor Pass Code' });
     }
 
-    // find active check-in entry
+    // Active entry record dhoondhna
     const activeLog = await CheckLog.findOne({
       pass: pass._id,
       status: 'CHECKED_IN'
@@ -114,7 +118,7 @@ const processCheckOut = async (req, res) => {
     if (!activeLog) {
       return res.status(400).json({
         success: false,
-        message: `No active check-in found for ${pass.visitorName}`
+        message: `${pass.visitorName} ka koi active check-in nahi mila`
       });
     }
 
@@ -127,16 +131,16 @@ const processCheckOut = async (req, res) => {
 
     res.json({
       success: true,
-      message: `Check-out recorded for ${pass.visitorName}`,
+      message: `${pass.visitorName} ka check-out complete ho gaya`,
       data: activeLog
     });
   } catch (error) {
-    console.error('Error in processCheckOut:', error.message);
+    console.error('processCheckOut error:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// 3. get all check logs
+// 3. Security Check Logs fetch karna (Filters ke sath)
 const getCheckLogs = async (req, res) => {
   try {
     const { status, search } = req.query;

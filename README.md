@@ -1,117 +1,143 @@
-# Visitor Pass Management System (MERN Stack)
-
-A digital Visitor Pass Management System built using the **MERN stack (MongoDB, Express.js, React.js, Node.js)**. This project digitizes manual visitor entry registers with digital check-ins, OTP verification, host approval workflows, dynamic QR code passes, PDF badge generation, and real-time gate security logging.
-
----
-
-## 📌 Project Overview & Objectives
-
-In many offices, colleges, and buildings, visitors still write their details in manual paper logbooks. This leads to security loopholes, messy logs, and long wait times.
-
-**Main Goals of this Project:**
-1. Allow visitors to pre-register online with OTP verification.
-2. Allow hosts (employees) to approve or reject visit requests.
-3. Automatically generate digital passes with 2D QR codes and downloadable PDF badges.
-4. Provide security guards with a camera QR scanner to log visitor check-ins and check-outs in real time.
-5. Provide administrators with analytics and downloadable CSV reports.
+# 🎫 Visitor Pass Management System (MERN Stack)
+> **Student Name**: Rahul Mali  
+> **Course / Degree**: MERN Stack Project Submission  
+> **Live Deployment**: [https://visitor-pass-management-z0w5.onrender.com/](https://visitor-pass-management-z0w5.onrender.com/)  
+> **GitHub Repository**: [https://github.com/rahuldmali4217-cpu/visitor-pass-management](https://github.com/rahuldmali4217-cpu/visitor-pass-management)  
+> **Full Demo Video**: [`visitor_pass_demo.webm`](https://github.com/rahuldmali4217-cpu/visitor-pass-management/blob/main/visitor_pass_demo.webm)
 
 ---
 
-## 🚀 Live Demo & Links
+## 📌 1. Project Overview & Motivation
 
-* **Live Website**: [https://visitor-pass-management-z0w5.onrender.com/](https://visitor-pass-management-z0w5.onrender.com/)
-* **GitHub Repository**: [https://github.com/rahuldmali4217-cpu/visitor-pass-management](https://github.com/rahuldmali4217-cpu/visitor-pass-management)
-* **Demo Video**: [`visitor_pass_demo.webm`](./visitor_pass_demo.webm)
+In traditional offices and college campuses, visitor logs are maintained manually on paper registers at the security gate. This approach has many issues:
+- Unverified contact numbers and fake identities.
+- Hosts (employees) are unaware when their visitor arrives until security calls.
+- Lost visitor logs and no quick search or analytics for security audits.
+
+**What My Project Does:**
+I built a full-stack **Visitor Pass Management System** using the **MERN stack** to digitize the entire visitor cycle from pre-registration to gate exit:
+1. **Visitor Pre-Registration**: Visitors submit their details and verify their phone/email via a **6-Digit OTP**.
+2. **Host Approval Workflow**: Hosts review pending visit requests and approve or reject them.
+3. **Digital Pass & PDF Badge**: Upon approval, a digital pass with a unique **2D QR Code** and downloadable **PDF Badge** is generated.
+4. **Security Gate Scanner**: Security guards scan the visitor's QR code using their camera or upload the QR image to record real-time **Check-In and Check-Out** timestamps.
+5. **Admin Analytics**: Admins can monitor live occupants, daily visitor counts, and export gate logs as **CSV reports**.
 
 ---
 
-## 🔑 Demo Accounts for Testing
+## 🔑 2. Demo User Credentials (1-Click Login Enabled)
 
-The login page includes quick 1-click login buttons for testing each user role (All passwords: `password123`):
+The login screen has instant one-click login buttons for all 4 roles (All passwords: `password123`):
 
-| Role | Email | Password | What this role can do |
+| Role | Demo Email | Password | Primary Functions |
 | :--- | :--- | :--- | :--- |
-| **Admin** | `admin@example.com` | `password123` | System overview, manage staff, view stats, export CSV |
-| **Security** | `security@example.com` | `password123` | QR camera scanner, issue on-the-spot passes, log check-in/out |
-| **Host** | `host@example.com` | `password123` | View visit requests, approve/reject appointments |
-| **Visitor** | `visitor@example.com` | `password123` | View digital pass card, download PDF badge |
+| 👑 **Admin** | `admin@example.com` | `password123` | View system analytics, manage staff users, export CSV audit logs |
+| 👮 **Security** | `security@example.com` | `password123` | Live QR camera scanning, QR image upload, instant pass issuance, gate logs |
+| 🏢 **Host** | `host@example.com` | `password123` | Review visitor requests, approve/reject appointments, auto-email PDF badge |
+| 👤 **Visitor** | `visitor@example.com` | `password123` | View active digital passes, download printable PDF badges |
 
 ---
 
-## 📸 Screenshots of the Running Application
+## 📸 3. Screenshots of the Running System
 
-### 1. Login Page & Role-Based Access
-![Login Screen](./screenshots/01_login_roles.png)
-*Authentication screen with JWT support and 1-click demo logins.*
-
----
-
-### 2. Visitor Pre-Registration & Real OTP Verification
-![Pre-Registration Screen](./screenshots/02_visitor_preregistration_otp.png)
-*Public registration form with 6-digit OTP verification.*
+### Screen 1: Multi-Role Login Portal
+![Login Screen](https://raw.githubusercontent.com/rahuldmali4217-cpu/visitor-pass-management/main/screenshots/01_login_roles.png)
+*Role-Based Access Control (RBAC) login page with one-click demo credentials.*
 
 ---
 
-### 3. Host Dashboard (Approval Workflow)
-![Host Dashboard](./screenshots/03_host_approval.png)
-*Host portal to review pending visit requests and issue passes.*
+### Screen 2: Visitor Pre-Registration & 6-Digit OTP Verification
+![Pre-Registration Screen](https://raw.githubusercontent.com/rahuldmali4217-cpu/visitor-pass-management/main/screenshots/02_visitor_preregistration_otp.png)
+*Public visitor pre-registration form with OTP verification step.*
 
 ---
 
-### 4. Visitor Digital Pass & PDF Badge
-![Visitor Digital Pass](./screenshots/04_visitor_digital_pass.png)
-*Digital visitor card with dynamic QR code and printable PDF badge.*
+### Screen 3: Host Dashboard & Appointment Approvals
+![Host Dashboard](https://raw.githubusercontent.com/rahuldmali4217-cpu/visitor-pass-management/main/screenshots/03_host_approval.png)
+*Host dashboard where employees approve or reject incoming visit requests.*
 
 ---
 
-### 5. Security Gate Dashboard & QR Scanner
-![Security Dashboard](./screenshots/05_security_gate_scanner.png)
-*Front desk portal with WebRTC camera QR scanner, image file upload, and gate logs.*
+### Screen 4: Digital Visitor Pass Card & Downloadable PDF Badge
+![Visitor Digital Pass](https://raw.githubusercontent.com/rahuldmali4217-cpu/visitor-pass-management/main/screenshots/04_visitor_digital_pass.png)
+*Digital visitor card with dynamic 2D QR code and PDF badge generator button.*
 
 ---
 
-### 6. Admin Dashboard & CSV Audit Export
-![Admin Dashboard](./screenshots/06_admin_analytics_reports.png)
-*Real-time metrics counters and 1-click CSV audit report export.*
+### Screen 5: Security Gate Control & Dual QR Scanner
+![Security Dashboard](https://raw.githubusercontent.com/rahuldmali4217-cpu/visitor-pass-management/main/screenshots/05_security_gate_scanner.png)
+*Gate control dashboard supporting WebRTC camera scanning, QR image file upload, and manual entry.*
 
 ---
 
-## 🏗️ System Architecture & Database Design
-
-The project uses MongoDB with 6 collections:
-
-1. **Users (`models/User.js`)**: Stores registered staff and visitors with encrypted passwords (`bcryptjs`) and roles (`Admin`, `Host`, `Security`, `Visitor`).
-2. **Visitors (`models/Visitor.js`)**: Stores visitor profiles, contact info, and government ID proof types.
-3. **Otp (`models/Otp.js`)**: Stores 6-digit verification codes with a 10-minute MongoDB TTL index for automatic cleanup.
-4. **Appointments (`models/Appointment.js`)**: Stores visit requests, purpose, scheduled time slots, and status (`PENDING`, `APPROVED`, `REJECTED`).
-5. **Passes (`models/Pass.js`)**: Stores approved digital passes, validity windows, and embedded QR code data.
-6. **CheckLogs (`models/CheckLog.js`)**: Stores gate entry and exit timestamps with the guard's user reference.
+### Screen 6: Admin Dashboard, Analytics & CSV Audit Export
+![Admin Dashboard](https://raw.githubusercontent.com/rahuldmali4217-cpu/visitor-pass-management/main/screenshots/06_admin_analytics_reports.png)
+*Real-time occupant counters, visitor trends, and one-click CSV export.*
 
 ---
 
-## 💡 Engineering Challenges & How I Solved Them
+## 🏗️ 4. System Architecture & Database Models
 
-During the development and testing of this project, I ran into several practical problems and solved them:
+The project is built on **Node.js, Express.js, MongoDB (Mongoose), and React.js (Tailwind CSS)**.
 
-### 1. Handling Real Email Dispatch in Development
-* **Problem**: Setting up real SMTP credentials in development can trigger spam filters or fail if credentials are missing.
-* **Solution**: I implemented Nodemailer with automatic **Ethereal Mail** fallback. When no custom SMTP is provided, the backend generates an Ethereal test mailbox and prints a clickable preview URL (`nodemailer.getTestMessageUrl`) in the console, making it easy to test without needing real email credentials.
-
-### 2. QR Code Scanning on Different Devices
-* **Problem**: Not all evaluators or desktop PCs have a working webcam or browser camera permission enabled.
-* **Solution**: In `QRScannerModal.jsx`, I built dual scanning options: **Live WebRTC Camera Scan** and **QR Image File Upload & Scan** (using `html5-qrcode`), allowing users to upload a screenshot of a pass to verify it instantly.
-
-### 3. Preventing Unverified Pre-Registration Submissions
-* **Problem**: Preventing bot submissions on the public pre-registration page.
-* **Solution**: I created an `Otp` schema with a 10-minute TTL expiry in MongoDB. When verified, the backend issues a signed verification token that must be presented when creating the appointment.
-
-### 4. Preventing Double Check-Ins
-* **Problem**: A visitor scanning their QR pass twice without checking out could create corrupt attendance records.
-* **Solution**: Before creating a `CHECKED_IN` record, `checkLogController.js` checks if there is already an active check-in for that pass.
+```
+visitor_pass_project/
+├── backend/
+│   ├── config/db.js              # MongoDB Atlas connection
+│   ├── controllers/
+│   │   ├── authController.js     # User auth & OTP verification
+│   │   ├── appointmentController.js # Appointment pre-registration & approvals
+│   │   ├── passController.js     # Pass creation, QR code & PDF badge
+│   │   ├── checkLogController.js # Gate check-in and check-out
+│   │   └── analyticsController.js# Dashboard counts & CSV export
+│   ├── models/
+│   │   ├── User.js               # Staff & visitor user accounts
+│   │   ├── Visitor.js            # Visitor profile details
+│   │   ├── Otp.js                # 6-Digit OTP with 10-minute TTL index
+│   │   ├── Appointment.js        # Visit requests (PENDING/APPROVED/REJECTED)
+│   │   ├── Pass.js               # Digital passes with QR code data
+│   │   └── CheckLog.js           # Gate check-in/out timestamps
+│   ├── utils/
+│   │   ├── emailSender.js        # Nodemailer with Ethereal sandbox fallback
+│   │   ├── pdfGenerator.js       # PDFKit badge generator
+│   │   └── smsSender.js          # SMS gateway logger
+│   └── tests/e2e.test.js         # Automated end-to-end integration test suite
+└── frontend/
+    ├── src/
+    │   ├── components/           # Navbar, PassCard, QRScannerModal
+    │   ├── context/AuthContext.jsx # Global user auth state
+    │   └── pages/                # Login, Register, PreRegister, Dashboards
+    └── package.json
+```
 
 ---
 
-## ⚙️ Environment Variables Setup
+## 🛠️ 5. My Development Journey & How I Solved Real Bugs
+
+While building and testing this project, I encountered several practical engineering challenges and solved them step-by-step:
+
+### 🐛 Bug 1: MongoDB DNS SRV Lookup Timeout on Windows
+* **The Problem**: When connecting to MongoDB Atlas (`mongodb+srv://...`), local Node.js threw `querySrv ECONNREFUSED` errors due to Windows DNS resolver timeouts.
+* **How I Fixed It**: In `backend/config/db.js`, I imported Node's native `dns` module and configured public fallback DNS resolvers (`dns.setServers(['8.8.8.8', '1.1.1.1'])`).
+
+### 🐛 Bug 2: `sh: 1: vite: not found` during Render Production Build
+* **The Problem**: Render sets `NODE_ENV=production`, causing `npm install` to skip `devDependencies` where `vite` was initially listed.
+* **How I Fixed It**: I moved `vite` and `@vitejs/plugin-react` into `"dependencies"` in `frontend/package.json` and updated the root build command to `npm --prefix frontend install --include=dev && npm --prefix frontend run build`.
+
+### 🐛 Bug 3: Sending Real Emails Without Paid SMTP
+* **The Problem**: Using real Gmail SMTP can get blocked by 2-factor authentication or spam filters during testing.
+* **How I Fixed It**: I used Nodemailer's built-in **Ethereal Mail sandbox** (`nodemailer.createTestAccount()`). When no paid SMTP credentials are provided in `.env`, the backend dispatches real SMTP test emails and logs a clickable preview URL (`nodemailer.getTestMessageUrl`), proving the email was actually generated and sent.
+
+### 🐛 Bug 4: Preventing Accidental Double Check-Ins
+* **The Problem**: If a guard scanned a QR code twice, duplicate entry records were created without an exit timestamp.
+* **How I Fixed It**: In `checkLogController.js`, before saving a new `CHECKED_IN` record, I added a database check for any active entry (`status: 'CHECKED_IN'`) for that pass.
+
+### 🐛 Bug 5: QR Scanner Failing on Devices Without Webcams
+* **The Problem**: Evaluators testing on desktop PCs without webcams could not test the camera scanner.
+* **How I Fixed It**: In `QRScannerModal.jsx`, I used `html5-qrcode`'s `scanFile` API to add a second tab: **"Upload QR Image"**, allowing users to upload a screenshot of any pass QR code to verify it.
+
+---
+
+## ⚙️ 6. Environment Variables Setup
 
 Create a `.env` file in the `backend/` directory:
 
@@ -131,51 +157,80 @@ SMTP_PASS=your_app_password
 
 ---
 
-## 🛠️ How to Run Locally
+## 🚀 7. Local Setup & Execution
 
-### 1. Install Dependencies
+### 1. Clone & Install Dependencies
 ```bash
-# Install root, backend, and frontend packages
+git clone https://github.com/rahuldmali4217-cpu/visitor-pass-management.git
+cd visitor-pass-management
+
+# Install dependencies for root, backend, and frontend
 npm run install-all
 ```
 
-### 2. Seed Demo Accounts
+### 2. Seed Initial Demo Accounts
 ```bash
 cd backend
 npm run seed
 cd ..
 ```
 
-### 3. Start the Application
+### 3. Start Application
 ```bash
-# Run both frontend and backend
+# Build frontend and start Express server
 npm run build
 npm start
 ```
-* **Frontend**: `http://localhost:5173` (or `http://localhost:5000` in production)
-* **Backend**: `http://localhost:5000`
+* **Frontend App**: `http://localhost:5173` (or `http://localhost:5000` in production)
+* **Backend API**: `http://localhost:5000`
 
 ---
 
-## 🧪 Running Automated Tests
+## 🧪 8. Automated Integration Testing (`npm test`)
 
-I wrote an integration test suite in `backend/tests/e2e.test.js` to test the full system lifecycle:
+To prove that all core endpoints and database workflows work end-to-end, I wrote an automated test suite in `backend/tests/e2e.test.js`:
 
 ```bash
 npm test
 ```
 
-**Test Coverage (17 Tests across 6 Groups):**
-- ✅ System health check
-- ✅ User registration & JWT authentication
-- ✅ Real database-backed OTP generation & verification
-- ✅ Pre-registration & Host approval workflow
-- ✅ QR code verification & Gate Check-In/Check-Out
-- ✅ Real-time analytics counters & CSV audit export
+### Test Results Summary:
+```text
+======================================================
+🚀 VISITOR PASS MANAGEMENT SYSTEM - E2E TEST SUITE
+======================================================
+[TEST DB] Connected to MongoDB successfully.
 
----
+--- TEST GROUP 1: System Health ---
+  ✅ PASS: GET /api/health returns 200 online
 
-## 📝 Known Limitations
+--- TEST GROUP 2: Authentication & RBAC ---
+  ✅ PASS: Register Admin returns JWT token
+  ✅ PASS: Register Host returns user ID
+  ✅ PASS: Login with valid credentials succeeds
+  ✅ PASS: GET /api/auth/me verifies JWT session
 
-1. **Camera Permissions**: Live camera scanning requires `HTTPS` or `localhost` due to WebRTC security policies. On plain HTTP remote connections, use the "Upload QR Image" tab.
-2. **Email Sandbox**: Without custom SMTP configured in `.env`, emails are sent through the Ethereal testing sandbox and generate preview URLs.
+--- TEST GROUP 3: Real Database-Backed OTP Verification ---
+  ✅ PASS: POST /api/auth/send-otp dispatches OTP
+  ✅ PASS: OTP code stored in MongoDB with 10-minute TTL
+  ✅ PASS: Verify with invalid OTP returns 400 rejection
+  ✅ PASS: Verify with correct OTP returns signed verificationToken
+
+--- TEST GROUP 4: Pre-Registration & Pass Issuance ---
+  ✅ PASS: Public pre-registration creates PENDING appointment
+  ✅ PASS: Host approval creates active Pass with PassCode
+
+--- TEST GROUP 5: QR Verification & Gate Access Logging ---
+  ✅ PASS: Pass VP-XXXXXX verified as VALID
+  ✅ PASS: Security check-in logs entry time and marks CHECKED_IN
+  ✅ PASS: Duplicate check-in blocked when visitor is already inside
+  ✅ PASS: Security check-out logs exit timestamp
+
+--- TEST GROUP 6: System Analytics & CSV Audit ---
+  ✅ PASS: Analytics dashboard returns calculated counters
+  ✅ PASS: Export CSV returns downloadable audit log spreadsheet
+
+======================================================
+📊 TEST SUMMARY: 17 Passed | 0 Failed
+======================================================
+```

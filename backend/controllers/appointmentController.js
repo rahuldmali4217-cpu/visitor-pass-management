@@ -1,3 +1,6 @@
+// ==========================================
+// Appointment & Visit Request Controller
+// ==========================================
 const jwt = require('jsonwebtoken');
 const Appointment = require('../models/Appointment');
 const Pass = require('../models/Pass');
@@ -8,7 +11,7 @@ const { sendEmail, sendPassIssuedEmail } = require('../utils/emailSender');
 
 const getJwtSecret = () => process.env.JWT_SECRET || 'visitor_pass_jwt_secret_2026';
 
-// helper to generate unique pass code
+// Unique 6-character Pass Code generate karne ka helper (e.g. VP-AB12CD)
 const generatePassCode = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = 'VP-';
@@ -18,7 +21,7 @@ const generatePassCode = () => {
   return code;
 };
 
-// 1. create appointment (visitor pre-register or host direct invite)
+// 1. Visitor Pre-registration ya Host direct appointment create karna
 const createAppointment = async (req, res) => {
   try {
     const {
@@ -37,20 +40,20 @@ const createAppointment = async (req, res) => {
     } = req.body;
 
     if (!visitorName || !visitorEmail || !visitorPhone || !hostId || !purpose || !scheduledStartTime || !scheduledEndTime) {
-      return res.status(400).json({ success: false, message: 'All required fields must be filled' });
+      return res.status(400).json({ success: false, message: 'Sabhi fields bharna zaroori hai' });
     }
 
     const cleanEmail = visitorEmail.toLowerCase().trim();
 
-    // find host in database
+    // Host user database me exist karta hai ya nahi check karna
     const hostUser = await User.findById(hostId);
     if (!hostUser || (hostUser.role !== 'Host' && hostUser.role !== 'Admin')) {
-      return res.status(400).json({ success: false, message: 'Selected host is invalid' });
+      return res.status(400).json({ success: false, message: 'Chuna gaya Host valid nahi hai' });
     }
 
     const isHost = req.user && (req.user.role === 'Host' || req.user.role === 'Admin');
 
-    // verify otp for public pre-registration
+    // Public visitor submission ke liye OTP verification token check karna
     if (!isHost) {
       let isVerified = false;
 
@@ -72,10 +75,11 @@ const createAppointment = async (req, res) => {
       }
 
       if (!isVerified && process.env.NODE_ENV === 'production') {
-        return res.status(400).json({ success: false, message: 'Please verify your OTP before submitting' });
+        return res.status(400).json({ success: false, message: 'Kripya pehle apna OTP verify karein' });
       }
     }
 
+    // Host direct banaye toh status APPROVED, visitor banaye toh PENDING
     const status = isHost ? 'APPROVED' : 'PENDING';
 
     const appointment = await Appointment.create({
@@ -97,7 +101,7 @@ const createAppointment = async (req, res) => {
 
     let pass = null;
 
-    // if host invites directly, automatically create pass and email pdf badge
+    // Agar appointment APPROVED hai toh turant digital pass aur PDF badge generate karna
     if (status === 'APPROVED') {
       const passCode = generatePassCode();
 
@@ -117,7 +121,7 @@ const createAppointment = async (req, res) => {
         createdBy: req.user ? req.user._id : hostId
       });
 
-      // generate pdf and send email
+      // PDF badge buffer banakar email par attach karke bhejna
       try {
         const pdfBuffer = await generatePassPDFBuffer({
           passCode,
@@ -139,35 +143,35 @@ const createAppointment = async (req, res) => {
           pdfBuffer
         });
       } catch (err) {
-        console.error('Email sending error:', err.message);
+        console.error('Email send error:', err.message);
       }
     } else {
-      // send pending notification to visitor and host
+      // Pending request ka email visitor aur host dono ko bhejna
       sendEmail({
         to: cleanEmail,
-        subject: `Visit Request Submitted - Pending Approval`,
-        html: `<h3>Hello ${visitorName},</h3><p>Your request to visit <b>${hostUser.name}</b> has been received and is waiting for approval.</p>`
+        subject: `Visit Request Submitted - Pending Approval by ${hostUser.name}`,
+        html: `<h3>Namaste ${visitorName},</h3><p>Aapki visit request Host <b>${hostUser.name}</b> ke paas review ke liye bhej di gayi hai.</p>`
       });
 
       sendEmail({
         to: hostUser.email,
         subject: `New Visitor Request from ${visitorName}`,
-        html: `<h3>Hello ${hostUser.name},</h3><p><b>${visitorName}</b> has requested a visit appointment for: <i>${purpose}</i>. Please login to approve or reject.</p>`
+        html: `<h3>Namaste ${hostUser.name},</h3><p><b>${visitorName}</b> ne meeting ke liye request submit ki hai: <i>${purpose}</i>. Approve karne ke liye login karein.</p>`
       });
     }
 
     res.status(201).json({
       success: true,
-      message: status === 'APPROVED' ? 'Pass issued successfully' : 'Pre-registration submitted successfully',
+      message: status === 'APPROVED' ? 'Pass successfully issue ho gaya' : 'Pre-registration request submit ho gayi',
       data: { appointment, pass }
     });
   } catch (error) {
-    console.error('Error in createAppointment:', error.message);
+    console.error('createAppointment error:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// 2. get appointments list for current user role
+// 2. Role ke hisab se appointments ki list nikalna
 const getAppointments = async (req, res) => {
   try {
     const filter = {};
@@ -191,23 +195,23 @@ const getAppointments = async (req, res) => {
   }
 };
 
-// 3. host approves or rejects visit request
+// 3. Host dwara visit request ko Approve ya Reject karna
 const updateAppointmentStatus = async (req, res) => {
   try {
     const { status, remarks } = req.body;
 
     if (!['APPROVED', 'REJECTED'].includes(status)) {
-      return res.status(400).json({ success: false, message: 'Status must be APPROVED or REJECTED' });
+      return res.status(400).json({ success: false, message: 'Status APPROVED ya REJECTED hona chahiye' });
     }
 
     const appointment = await Appointment.findById(req.params.id).populate('host', 'name email department');
     if (!appointment) {
-      return res.status(404).json({ success: false, message: 'Appointment not found' });
+      return res.status(404).json({ success: false, message: 'Appointment record nahi mila' });
     }
 
-    // only assigned host or admin can update status
+    // Sirf wahi host update kar sakta hai jiske liye request aayi thi
     if (req.user.role === 'Host' && appointment.host._id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Not authorized for this appointment' });
+      return res.status(403).json({ success: false, message: 'Aapko is request ko update karne ki permission nahi hai' });
     }
 
     appointment.status = status;
@@ -216,6 +220,7 @@ const updateAppointmentStatus = async (req, res) => {
 
     let pass = null;
 
+    // Approve hone par Digital Pass issue karna aur email bhejna
     if (status === 'APPROVED') {
       let existingPass = await Pass.findOne({ appointment: appointment._id });
       if (!existingPass) {
@@ -239,7 +244,7 @@ const updateAppointmentStatus = async (req, res) => {
         pass = existingPass;
       }
 
-      // send pass email with pdf badge
+      // PDF badge ke sath email send karna
       try {
         const pdfBuffer = await generatePassPDFBuffer({
           passCode: pass.passCode,
@@ -261,24 +266,24 @@ const updateAppointmentStatus = async (req, res) => {
           pdfBuffer
         });
       } catch (err) {
-        console.error('PDF email error:', err.message);
+        console.error('PDF badge send error:', err.message);
       }
     } else {
-      // rejection email
+      // Rejection alert email bhejna
       sendEmail({
         to: appointment.visitor.email,
         subject: `Visit Request Update: ${appointment.visitor.name}`,
-        html: `<h3>Hello ${appointment.visitor.name},</h3><p>Your visit request to meet <b>${appointment.host.name}</b> was not approved.</p>`
+        html: `<h3>Namaste ${appointment.visitor.name},</h3><p>Aapki request <b>${appointment.host.name}</b> ke sath approve nahi ho payi.</p>`
       });
     }
 
     res.json({
       success: true,
-      message: `Appointment ${status.toLowerCase()} successfully`,
+      message: `Appointment ${status} kar diya gaya hai`,
       data: { appointment, pass }
     });
   } catch (error) {
-    console.error('Error in updateAppointmentStatus:', error.message);
+    console.error('updateAppointmentStatus error:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
