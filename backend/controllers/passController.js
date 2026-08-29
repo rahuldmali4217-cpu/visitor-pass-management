@@ -1,16 +1,23 @@
-// Pass model, User model, QR Code Generator aur PDF Badge Generator import kar rahe hain
 const Pass = require('../models/Pass');
 const User = require('../models/User');
-const { generateQRCode } = require('../utils/qrGenerator');
 const { generatePassPDFBuffer } = require('../utils/pdfGenerator');
+const { sendPassIssuedEmail } = require('../utils/emailSender');
 
-// Unique 6-character Pass Code banane ka function (Jaise: VP-AB12CD)
+// Helper to generate unique pass code
 const generatePassCode = () => {
-  return 'VP-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let result = 'VP-';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 };
 
-// 1. Instant Digital Pass Issue karna (Security, Admin ya Host ke dwara)
-// POST /api/passes
+/**
+ * @desc    Issue an on-the-spot instant pass (Security, Admin, Host)
+ * @route   POST /api/passes
+ * @access  Private
+ */
 const issuePass = async (req, res) => {
   try {
     const {
@@ -25,54 +32,83 @@ const issuePass = async (req, res) => {
     } = req.body;
 
     if (!visitorName || !visitorEmail || !visitorPhone || !hostId || !purpose) {
-      return res.status(400).json({ success: false, message: 'Please fill all required visitor details' });
+      return res.status(400).json({ success: false, message: 'Please provide all required visitor details' });
     }
 
-    // Host user check karo
     const host = await User.findById(hostId);
     if (!host) {
-      return res.status(400).json({ success: false, message: 'Host not found' });
+      return res.status(400).json({ success: false, message: 'Designated host was not found' });
     }
 
     const passCode = generatePassCode();
-    const qrCodeData = passCode; // QR code me passCode embed hoga
+    const startTime = validFrom ? new Date(validFrom) : new Date();
+    const endTime = validUntil ? new Date(validUntil) : new Date(Date.now() + 8 * 60 * 60 * 1000); // 8-hour default validity
 
-    // Pass database me save karo (default 8 hours validity ke sath)
     const pass = await Pass.create({
       passCode,
       visitorName,
-      visitorEmail,
+      visitorEmail: visitorEmail.toLowerCase().trim(),
       visitorPhone,
       visitorCompany: visitorCompany || 'Independent',
       host: hostId,
       purpose,
-      validFrom: validFrom || new Date(),
-      validUntil: validUntil || new Date(Date.now() + 8 * 60 * 60 * 1000),
+      validFrom: startTime,
+      validUntil: endTime,
       status: 'ACTIVE',
-      qrCodeData,
+      qrCodeData: passCode,
       createdBy: req.user._id
     });
 
     const populatedPass = await Pass.findById(pass._id).populate('host', 'name email department phone');
 
+    // Generate PDF badge and email to visitor in the background
+    try {
+      const pdfBuffer = await generatePassPDFBuffer({
+        passCode,
+        visitorName,
+        visitorCompany: visitorCompany || 'Independent',
+        hostName: host.name,
+        purpose,
+        validFrom: startTime,
+        validUntil: endTime
+      });
+
+      sendPassIssuedEmail({
+        toEmail: visitorEmail.toLowerCase().trim(),
+        visitorName,
+        passCode,
+        validFrom: startTime,
+        validUntil: endTime,
+        hostName: host.name,
+        pdfBuffer
+      }).catch(err => console.error('Failed to email instant pass badge:', err.message));
+    } catch (pdfErr) {
+      console.warn('Could not generate PDF buffer for instant pass email:', pdfErr.message);
+    }
+
     res.status(201).json({
       success: true,
+      message: 'Instant pass issued successfully',
       data: populatedPass
     });
   } catch (error) {
+    console.error('Error in issuePass:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// 2. Role ke according Passes ki list fetch karna
-// GET /api/passes
+/**
+ * @desc    Get all passes (Filtered by user role)
+ * @route   GET /api/passes
+ * @access  Private
+ */
 const getPasses = async (req, res) => {
   try {
     const filter = {};
     if (req.user.role === 'Host') {
-      filter.host = req.user._id; // Host ko sirf uske visitors dikhenge
+      filter.host = req.user._id;
     } else if (req.user.role === 'Visitor') {
-      filter.visitorEmail = req.user.email; // Visitor ko sirf apna pass dikhega
+      filter.visitorEmail = req.user.email.toLowerCase();
     }
 
     const passes = await Pass.find(filter)
@@ -89,31 +125,40 @@ const getPasses = async (req, res) => {
   }
 };
 
-// 3. QR Code / Pass Code scan karke check karna ki pass valid hai ya expired
-// GET /api/passes/verify/:code
+/**
+ * @desc    Verify QR Code or Pass Code
+ * @route   GET /api/passes/verify/:code
+ * @access  Public / Security
+ */
 const verifyPass = async (req, res) => {
   try {
-    const code = req.params.code.trim();
+    const rawCode = req.params.code.trim();
+    const cleanCode = rawCode.toUpperCase();
+
     const pass = await Pass.findOne({
-      $or: [{ passCode: code }, { _id: code.length === 24 ? code : null }]
+      $or: [
+        { passCode: cleanCode },
+        { passCode: rawCode },
+        { _id: rawCode.length === 24 ? rawCode : null }
+      ]
     }).populate('host', 'name email department phone');
 
     if (!pass) {
       return res.status(404).json({
         success: false,
         valid: false,
-        message: 'Invalid Visitor Pass Code'
+        message: `No pass found matching code "${rawCode}"`
       });
     }
 
-    // Expiry aur status check karo
     const now = new Date();
     const isExpired = now > new Date(pass.validUntil);
     const isRevoked = pass.status === 'REVOKED';
+    const isValid = !isExpired && !isRevoked && pass.status === 'ACTIVE';
 
     res.json({
       success: true,
-      valid: !isExpired && !isRevoked && pass.status === 'ACTIVE',
+      valid: isValid,
       status: isExpired ? 'EXPIRED' : pass.status,
       data: pass
     });
@@ -122,16 +167,18 @@ const verifyPass = async (req, res) => {
   }
 };
 
-// 4. Pass ka printable PDF Badge generate karke download karwana
-// GET /api/passes/:id/pdf
+/**
+ * @desc    Generate & download printable PDF Badge
+ * @route   GET /api/passes/:id/pdf
+ * @access  Public / Private
+ */
 const downloadPassPDF = async (req, res) => {
   try {
     const pass = await Pass.findById(req.params.id).populate('host', 'name email department');
     if (!pass) {
-      return res.status(404).json({ success: false, message: 'Pass not found' });
+      return res.status(404).json({ success: false, message: 'Pass record not found' });
     }
 
-    // PDFKit se instant binary buffer create karna
     const pdfBuffer = await generatePassPDFBuffer({
       passCode: pass.passCode,
       visitorName: pass.visitorName,
@@ -142,11 +189,11 @@ const downloadPassPDF = async (req, res) => {
       validUntil: pass.validUntil
     });
 
-    // Browser ko PDF download response bhejna
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="Pass-${pass.passCode}.pdf"`);
+    res.setHeader('Content-Disposition', `attachment; filename="VisitorPass-${pass.passCode}.pdf"`);
     res.send(pdfBuffer);
   } catch (error) {
+    console.error('Error in downloadPassPDF:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

@@ -5,7 +5,8 @@
   "main": "backend/server.js",
   "scripts": {
     "build": "npm install && npm install --prefix frontend && npm run build --prefix frontend",
-    "start": "node backend/server.js"
+    "start": "node backend/server.js",
+    "test": "node backend/tests/e2e.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
