@@ -5,25 +5,20 @@ const User = require('../models/User');
 const Otp = require('../models/Otp');
 const { generatePassPDFBuffer } = require('../utils/pdfGenerator');
 const { sendEmail, sendPassIssuedEmail } = require('../utils/emailSender');
-const { sendSMS } = require('../utils/smsSender');
 
-const getJwtSecret = () => process.env.JWT_SECRET || 'visitor_pass_default_jwt_secret_key_2026';
+const getJwtSecret = () => process.env.JWT_SECRET || 'visitor_pass_jwt_secret_2026';
 
-// Generate unique pass code with format VP-XXXXXX
+// helper to generate unique pass code
 const generatePassCode = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let result = 'VP-';
+  let code = 'VP-';
   for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return result;
+  return code;
 };
 
-/**
- * @desc    Create new Appointment (Visitor Pre-Registration or Host Invitation)
- * @route   POST /api/appointments OR POST /api/appointments/public-register
- * @access  Public (with verified OTP) / Private (Host / Admin)
- */
+// 1. create appointment (visitor pre-register or host direct invite)
 const createAppointment = async (req, res) => {
   try {
     const {
@@ -41,64 +36,52 @@ const createAppointment = async (req, res) => {
       verificationToken
     } = req.body;
 
-    // Validate required fields
     if (!visitorName || !visitorEmail || !visitorPhone || !hostId || !purpose || !scheduledStartTime || !scheduledEndTime) {
-      return res.status(400).json({ success: false, message: 'All visitor and appointment fields are required' });
+      return res.status(400).json({ success: false, message: 'All required fields must be filled' });
     }
 
-    const normalizedEmail = visitorEmail.toLowerCase().trim();
+    const cleanEmail = visitorEmail.toLowerCase().trim();
 
-    // Verify host exists and has Host or Admin role
+    // find host in database
     const hostUser = await User.findById(hostId);
     if (!hostUser || (hostUser.role !== 'Host' && hostUser.role !== 'Admin')) {
-      return res.status(400).json({ success: false, message: 'Selected host is invalid or not available' });
+      return res.status(400).json({ success: false, message: 'Selected host is invalid' });
     }
 
-    const isHostCreating = req.user && (req.user.role === 'Host' || req.user.role === 'Admin');
+    const isHost = req.user && (req.user.role === 'Host' || req.user.role === 'Admin');
 
-    // If submitted via public pre-registration, ensure OTP was verified
-    if (!isHostCreating) {
-      let otpVerified = false;
+    // verify otp for public pre-registration
+    if (!isHost) {
+      let isVerified = false;
 
       if (verificationToken) {
         try {
           const decoded = jwt.verify(verificationToken, getJwtSecret());
-          if (decoded.email === normalizedEmail) {
-            otpVerified = true;
+          if (decoded.email === cleanEmail) {
+            isVerified = true;
           }
-        } catch (tokenErr) {
-          // Token invalid or expired
+        } catch (e) {}
+      }
+
+      if (!isVerified) {
+        const verifiedOtp = await Otp.findOne({ email: cleanEmail, verified: true }).sort({ createdAt: -1 });
+        if (verifiedOtp) {
+          isVerified = true;
+          await Otp.deleteOne({ _id: verifiedOtp._id });
         }
       }
 
-      // Check DB for recent verified OTP if token verification didn't match
-      if (!otpVerified) {
-        const verifiedRecord = await Otp.findOne({
-          email: normalizedEmail,
-          verified: true
-        }).sort({ createdAt: -1 });
-
-        if (verifiedRecord) {
-          otpVerified = true;
-          // Consume the OTP so it cannot be reused
-          await Otp.deleteOne({ _id: verifiedRecord._id });
-        }
-      }
-
-      if (!otpVerified && process.env.NODE_ENV === 'production') {
-        return res.status(400).json({
-          success: false,
-          message: 'OTP verification required before submitting pre-registration.'
-        });
+      if (!isVerified && process.env.NODE_ENV === 'production') {
+        return res.status(400).json({ success: false, message: 'Please verify your OTP before submitting' });
       }
     }
 
-    const status = isHostCreating ? 'APPROVED' : 'PENDING';
+    const status = isHost ? 'APPROVED' : 'PENDING';
 
     const appointment = await Appointment.create({
       visitor: {
         name: visitorName,
-        email: normalizedEmail,
+        email: cleanEmail,
         phone: visitorPhone,
         company: visitorCompany || 'Independent',
         idProofType: idProofType || 'Aadhaar',
@@ -109,12 +92,12 @@ const createAppointment = async (req, res) => {
       scheduledStartTime: new Date(scheduledStartTime),
       scheduledEndTime: new Date(scheduledEndTime),
       status,
-      requestedBy: requestedBy || (isHostCreating ? 'HOST' : 'VISITOR')
+      requestedBy: requestedBy || (isHost ? 'HOST' : 'VISITOR')
     });
 
     let pass = null;
 
-    // If host is inviting directly, auto-issue active pass and generate PDF
+    // if host invites directly, automatically create pass and email pdf badge
     if (status === 'APPROVED') {
       const passCode = generatePassCode();
 
@@ -122,7 +105,7 @@ const createAppointment = async (req, res) => {
         passCode,
         appointment: appointment._id,
         visitorName,
-        visitorEmail: normalizedEmail,
+        visitorEmail: cleanEmail,
         visitorPhone,
         visitorCompany: visitorCompany || 'Independent',
         host: hostId,
@@ -134,7 +117,7 @@ const createAppointment = async (req, res) => {
         createdBy: req.user ? req.user._id : hostId
       });
 
-      // Generate PDF badge buffer for email attachment
+      // generate pdf and send email
       try {
         const pdfBuffer = await generatePassPDFBuffer({
           passCode,
@@ -147,7 +130,7 @@ const createAppointment = async (req, res) => {
         });
 
         await sendPassIssuedEmail({
-          toEmail: normalizedEmail,
+          toEmail: cleanEmail,
           visitorName,
           passCode,
           validFrom: scheduledStartTime,
@@ -155,62 +138,36 @@ const createAppointment = async (req, res) => {
           hostName: hostUser.name,
           pdfBuffer
         });
-      } catch (emailErr) {
-        console.error('Email sending failed on host invitation:', emailErr.message);
+      } catch (err) {
+        console.error('Email sending error:', err.message);
       }
     } else {
-      // Send confirmation email to visitor and notification to host
+      // send pending notification to visitor and host
       sendEmail({
-        to: normalizedEmail,
-        subject: `Visit Request Submitted - Pending Approval by ${hostUser.name}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 580px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;">
-            <h3 style="color: #0f172a;">Pre-Registration Submitted 📋</h3>
-            <p>Hello <strong>${visitorName}</strong>,</p>
-            <p>Your visit request to meet <strong>${hostUser.name} (${hostUser.department})</strong> has been received and is pending approval.</p>
-            <p><strong>Scheduled:</strong> ${new Date(scheduledStartTime).toLocaleString()} - ${new Date(scheduledEndTime).toLocaleString()}</p>
-            <p><strong>Purpose:</strong> ${purpose}</p>
-            <p style="color: #64748b; font-size: 13px;">You will receive an email with your Digital QR Pass once approved.</p>
-          </div>
-        `
+        to: cleanEmail,
+        subject: `Visit Request Submitted - Pending Approval`,
+        html: `<h3>Hello ${visitorName},</h3><p>Your request to visit <b>${hostUser.name}</b> has been received and is waiting for approval.</p>`
       });
 
-      // Notify Host about the new visitor request
       sendEmail({
         to: hostUser.email,
         subject: `New Visitor Request from ${visitorName}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 580px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;">
-            <h3 style="color: #0f172a;">New Visit Request Alert 🔔</h3>
-            <p>Hello <strong>${hostUser.name}</strong>,</p>
-            <p><strong>${visitorName}</strong> from <em>${visitorCompany || 'Independent'}</em> has requested an appointment with you.</p>
-            <p><strong>Purpose:</strong> ${purpose}</p>
-            <p><strong>Time:</strong> ${new Date(scheduledStartTime).toLocaleString()}</p>
-            <p>Please log in to your Host Dashboard to approve or reject this request.</p>
-          </div>
-        `
+        html: `<h3>Hello ${hostUser.name},</h3><p><b>${visitorName}</b> has requested a visit appointment for: <i>${purpose}</i>. Please login to approve or reject.</p>`
       });
     }
 
     res.status(201).json({
       success: true,
       message: status === 'APPROVED' ? 'Pass issued successfully' : 'Pre-registration submitted successfully',
-      data: {
-        appointment,
-        pass
-      }
+      data: { appointment, pass }
     });
   } catch (error) {
-    console.error('Error in createAppointment:', error);
+    console.error('Error in createAppointment:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * @desc    Get Appointments list (Role-filtered)
- * @route   GET /api/appointments
- * @access  Private
- */
+// 2. get appointments list for current user role
 const getAppointments = async (req, res) => {
   try {
     const filter = {};
@@ -234,11 +191,7 @@ const getAppointments = async (req, res) => {
   }
 };
 
-/**
- * @desc    Approve or Reject visit request by Host/Admin
- * @route   PUT /api/appointments/:id/status
- * @access  Private (Host / Admin)
- */
+// 3. host approves or rejects visit request
 const updateAppointmentStatus = async (req, res) => {
   try {
     const { status, remarks } = req.body;
@@ -252,9 +205,9 @@ const updateAppointmentStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Appointment not found' });
     }
 
-    // Role check: Only the designated host or an Admin can approve
+    // only assigned host or admin can update status
     if (req.user.role === 'Host' && appointment.host._id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, message: 'Unauthorized: You are not the assigned host for this appointment' });
+      return res.status(403).json({ success: false, message: 'Not authorized for this appointment' });
     }
 
     appointment.status = status;
@@ -286,7 +239,7 @@ const updateAppointmentStatus = async (req, res) => {
         pass = existingPass;
       }
 
-      // Generate PDF badge and email to visitor
+      // send pass email with pdf badge
       try {
         const pdfBuffer = await generatePassPDFBuffer({
           passCode: pass.passCode,
@@ -308,35 +261,24 @@ const updateAppointmentStatus = async (req, res) => {
           pdfBuffer
         });
       } catch (err) {
-        console.error('Failed to attach PDF badge to approval email:', err.message);
+        console.error('PDF email error:', err.message);
       }
     } else {
-      // Rejection email
+      // rejection email
       sendEmail({
         to: appointment.visitor.email,
-        subject: `Visit Request Declined: ${appointment.visitor.name}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 580px; margin: auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px;">
-            <h3 style="color: #dc2626;">Visit Request Declined ❌</h3>
-            <p>Hello <strong>${appointment.visitor.name}</strong>,</p>
-            <p>Your visit request to meet <strong>${appointment.host.name}</strong> has been declined.</p>
-            ${remarks ? `<p><strong>Reason / Remarks:</strong> ${remarks}</p>` : ''}
-            <p style="color: #64748b; font-size: 13px;">Please contact your host directly for further information.</p>
-          </div>
-        `
+        subject: `Visit Request Update: ${appointment.visitor.name}`,
+        html: `<h3>Hello ${appointment.visitor.name},</h3><p>Your visit request to meet <b>${appointment.host.name}</b> was not approved.</p>`
       });
     }
 
     res.json({
       success: true,
       message: `Appointment ${status.toLowerCase()} successfully`,
-      data: {
-        appointment,
-        pass
-      }
+      data: { appointment, pass }
     });
   } catch (error) {
-    console.error('Error in updateAppointmentStatus:', error);
+    console.error('Error in updateAppointmentStatus:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };

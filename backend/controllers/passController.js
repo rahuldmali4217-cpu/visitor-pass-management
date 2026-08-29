@@ -3,21 +3,17 @@ const User = require('../models/User');
 const { generatePassPDFBuffer } = require('../utils/pdfGenerator');
 const { sendPassIssuedEmail } = require('../utils/emailSender');
 
-// Helper to generate unique pass code
+// helper to generate unique pass code
 const generatePassCode = () => {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let result = 'VP-';
+  let code = 'VP-';
   for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return result;
+  return code;
 };
 
-/**
- * @desc    Issue an on-the-spot instant pass (Security, Admin, Host)
- * @route   POST /api/passes
- * @access  Private
- */
+// 1. issue instant pass by security or admin
 const issuePass = async (req, res) => {
   try {
     const {
@@ -32,17 +28,17 @@ const issuePass = async (req, res) => {
     } = req.body;
 
     if (!visitorName || !visitorEmail || !visitorPhone || !hostId || !purpose) {
-      return res.status(400).json({ success: false, message: 'Please provide all required visitor details' });
+      return res.status(400).json({ success: false, message: 'Please provide all required fields' });
     }
 
     const host = await User.findById(hostId);
     if (!host) {
-      return res.status(400).json({ success: false, message: 'Designated host was not found' });
+      return res.status(400).json({ success: false, message: 'Host not found' });
     }
 
     const passCode = generatePassCode();
     const startTime = validFrom ? new Date(validFrom) : new Date();
-    const endTime = validUntil ? new Date(validUntil) : new Date(Date.now() + 8 * 60 * 60 * 1000); // 8-hour default validity
+    const endTime = validUntil ? new Date(validUntil) : new Date(Date.now() + 8 * 60 * 60 * 1000);
 
     const pass = await Pass.create({
       passCode,
@@ -61,7 +57,7 @@ const issuePass = async (req, res) => {
 
     const populatedPass = await Pass.findById(pass._id).populate('host', 'name email department phone');
 
-    // Generate PDF badge and email to visitor in the background
+    // generate pdf and email in background
     try {
       const pdfBuffer = await generatePassPDFBuffer({
         passCode,
@@ -81,27 +77,23 @@ const issuePass = async (req, res) => {
         validUntil: endTime,
         hostName: host.name,
         pdfBuffer
-      }).catch(err => console.error('Failed to email instant pass badge:', err.message));
-    } catch (pdfErr) {
-      console.warn('Could not generate PDF buffer for instant pass email:', pdfErr.message);
+      }).catch(err => console.error('Pass email error:', err.message));
+    } catch (err) {
+      console.warn('PDF generation error:', err.message);
     }
 
     res.status(201).json({
       success: true,
-      message: 'Instant pass issued successfully',
+      message: 'Pass issued successfully',
       data: populatedPass
     });
   } catch (error) {
-    console.error('Error in issuePass:', error);
+    console.error('Error in issuePass:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * @desc    Get all passes (Filtered by user role)
- * @route   GET /api/passes
- * @access  Private
- */
+// 2. get passes list for user role
 const getPasses = async (req, res) => {
   try {
     const filter = {};
@@ -125,11 +117,7 @@ const getPasses = async (req, res) => {
   }
 };
 
-/**
- * @desc    Verify QR Code or Pass Code
- * @route   GET /api/passes/verify/:code
- * @access  Public / Security
- */
+// 3. verify qr code or pass code
 const verifyPass = async (req, res) => {
   try {
     const rawCode = req.params.code.trim();
@@ -147,7 +135,7 @@ const verifyPass = async (req, res) => {
       return res.status(404).json({
         success: false,
         valid: false,
-        message: `No pass found matching code "${rawCode}"`
+        message: `No pass found for code: ${rawCode}`
       });
     }
 
@@ -167,16 +155,12 @@ const verifyPass = async (req, res) => {
   }
 };
 
-/**
- * @desc    Generate & download printable PDF Badge
- * @route   GET /api/passes/:id/pdf
- * @access  Public / Private
- */
+// 4. download printable pdf badge
 const downloadPassPDF = async (req, res) => {
   try {
     const pass = await Pass.findById(req.params.id).populate('host', 'name email department');
     if (!pass) {
-      return res.status(404).json({ success: false, message: 'Pass record not found' });
+      return res.status(404).json({ success: false, message: 'Pass not found' });
     }
 
     const pdfBuffer = await generatePassPDFBuffer({
@@ -193,7 +177,7 @@ const downloadPassPDF = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="VisitorPass-${pass.passCode}.pdf"`);
     res.send(pdfBuffer);
   } catch (error) {
-    console.error('Error in downloadPassPDF:', error);
+    console.error('Error in downloadPassPDF:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };

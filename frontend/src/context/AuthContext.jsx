@@ -1,24 +1,22 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState } from 'react';
 import API from '../services/api';
 
-// Pura application me user session aur role share karne ke liye AuthContext
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  // LocalStorage se saved user login info load karna (Page refresh par login maintain rahe)
+  // load saved user from local storage
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('userInfo');
     return saved ? JSON.parse(saved) : null;
   });
   const [loading, setLoading] = useState(false);
 
-  // 1. User Login function
+  // handle user login
   const login = async (email, password) => {
     setLoading(true);
     try {
       const res = await API.post('/auth/login', { email, password });
       setUser(res.data.data);
-      // Token aur user data ko browser ke localStorage me save karna
       localStorage.setItem('userInfo', JSON.stringify(res.data.data));
       setLoading(false);
       return { success: true, data: res.data.data };
@@ -31,7 +29,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 2. User Registration function
+  // handle user registration
   const register = async (userData) => {
     setLoading(true);
     try {
@@ -49,7 +47,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // 3. Logout function (Token delete karna aur state clear karna)
+  // handle logout
   const logout = () => {
     setUser(null);
     localStorage.removeItem('userInfo');

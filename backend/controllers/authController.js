@@ -5,106 +5,92 @@ const Otp = require('../models/Otp');
 const { sendOtpEmail } = require('../utils/emailSender');
 const { sendSMS } = require('../utils/smsSender');
 
-// Helper to get JWT secret
-const getJwtSecret = () => process.env.JWT_SECRET || 'visitor_pass_default_jwt_secret_key_2026';
+const getJwtSecret = () => process.env.JWT_SECRET || 'visitor_pass_jwt_secret_2026';
 
-// Generate standard 30-day JWT session token
+// helper to create jwt session token
 const generateToken = (id) => {
-  return jwt.sign({ id }, getJwtSecret(), {
-    expiresIn: '30d'
-  });
+  return jwt.sign({ id }, getJwtSecret(), { expiresIn: '30d' });
 };
 
-// Generate single-use 15-minute OTP verification token
-const generateOtpVerificationToken = (email) => {
-  return jwt.sign({ email, purpose: 'PRE_REGISTRATION_VERIFIED' }, getJwtSecret(), {
-    expiresIn: '15m'
-  });
+// helper to create temporary token after verifying otp
+const generateOtpToken = (email) => {
+  return jwt.sign({ email, purpose: 'PRE_REGISTRATION_VERIFIED' }, getJwtSecret(), { expiresIn: '15m' });
 };
 
-/**
- * @desc    Send 6-digit One-Time Password (OTP) to email & SMS
- * @route   POST /api/auth/send-otp
- * @access  Public
- */
+// 1. send 6-digit otp for visitor pre-registration
 const sendOtp = async (req, res) => {
   try {
     const { email, phone, name } = req.body;
 
-    if (!email || !email.includes('@')) {
-      return res.status(400).json({ success: false, message: 'Please provide a valid email address' });
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const cleanEmail = email.toLowerCase().trim();
 
-    // Generate cryptographic 6-digit numeric OTP
+    // generate random 6-digit number
     const otpCode = crypto.randomInt(100000, 999999).toString();
 
-    // Delete any existing unverified OTP for this email
-    await Otp.deleteMany({ email: normalizedEmail, verified: false });
+    // remove any old unverified otp for this email
+    await Otp.deleteMany({ email: cleanEmail, verified: false });
 
-    // Store new OTP with 10-minute expiry
+    // save new otp to database
     await Otp.create({
-      email: normalizedEmail,
+      email: cleanEmail,
       phone: phone || '',
       otpCode,
       purpose: 'PRE_REGISTRATION'
     });
 
-    // Send real email via Nodemailer (Ethereal sandbox fallback if no SMTP configured)
-    const emailResult = await sendOtpEmail(normalizedEmail, otpCode, name);
+    // send email with otp
+    const emailResult = await sendOtpEmail(cleanEmail, otpCode, name);
 
-    // Send SMS notification if phone number is provided
+    // send sms if phone number provided
     if (phone) {
       await sendSMS({
         toPhone: phone,
-        message: `Your Visitor Pass verification code is ${otpCode}. Valid for 10 minutes.`
+        message: `Your Visitor Pass OTP is ${otpCode}. Valid for 10 minutes.`
       });
     }
 
     res.json({
       success: true,
-      message: `OTP sent successfully to ${normalizedEmail}`,
+      message: `OTP sent to ${cleanEmail}`,
       previewUrl: emailResult.previewUrl || null,
-      // For automated evaluation / test suites when running on localhost or Ethereal sandbox:
       devOtp: process.env.NODE_ENV !== 'production' || emailResult.previewUrl ? otpCode : undefined
     });
   } catch (error) {
-    console.error('Error in sendOtp:', error);
+    console.error('Error in sendOtp:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * @desc    Verify 6-digit OTP code & return verification token
- * @route   POST /api/auth/verify-otp
- * @access  Public
- */
+// 2. verify 6-digit otp code entered by user
 const verifyOtp = async (req, res) => {
   try {
     const { email, otpCode } = req.body;
 
     if (!email || !otpCode) {
-      return res.status(400).json({ success: false, message: 'Please provide email and 6-digit OTP code' });
+      return res.status(400).json({ success: false, message: 'Email and OTP code are required' });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const cleanEmail = email.toLowerCase().trim();
     const cleanOtp = otpCode.toString().trim();
 
-    // Find the latest active OTP record for this email
+    // find latest unverified otp
     const otpRecord = await Otp.findOne({
-      email: normalizedEmail,
+      email: cleanEmail,
       verified: false
     }).sort({ createdAt: -1 });
 
     if (!otpRecord) {
       return res.status(400).json({
         success: false,
-        message: 'No active OTP found or code has expired. Please request a new OTP.'
+        message: 'OTP expired or not found. Please request a new code.'
       });
     }
 
-    // Check maximum attempt count (prevent brute force)
+    // check attempt limit
     if (otpRecord.attempts >= 5) {
       await Otp.deleteOne({ _id: otpRecord._id });
       return res.status(429).json({
@@ -113,22 +99,21 @@ const verifyOtp = async (req, res) => {
       });
     }
 
-    // Check OTP match
+    // check if otp matches
     if (otpRecord.otpCode !== cleanOtp) {
       otpRecord.attempts += 1;
       await otpRecord.save();
       return res.status(400).json({
         success: false,
-        message: `Invalid OTP code. ${5 - otpRecord.attempts} attempt(s) remaining.`
+        message: `Invalid OTP code. ${5 - otpRecord.attempts} attempt(s) left.`
       });
     }
 
-    // Mark as verified
+    // mark otp as verified
     otpRecord.verified = true;
     await otpRecord.save();
 
-    // Issue signed verification token
-    const verificationToken = generateOtpVerificationToken(normalizedEmail);
+    const verificationToken = generateOtpToken(cleanEmail);
 
     res.json({
       success: true,
@@ -136,34 +121,32 @@ const verifyOtp = async (req, res) => {
       verificationToken
     });
   } catch (error) {
-    console.error('Error in verifyOtp:', error);
+    console.error('Error in verifyOtp:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * @desc    Register a new user (Admin, Host, Security, Visitor)
- * @route   POST /api/auth/register
- * @access  Public
- */
+// 3. register a new user
 const registerUser = async (req, res) => {
   try {
     const { name, email, password, role, phone, department } = req.body;
 
     if (!name || !email || !password) {
-      return res.status(400).json({ success: false, message: 'Name, email, and password are required' });
+      return res.status(400).json({ success: false, message: 'Please provide all required fields' });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
+    const cleanEmail = email.toLowerCase().trim();
 
-    const userExists = await User.findOne({ email: normalizedEmail });
+    // check if user already exists
+    const userExists = await User.findOne({ email: cleanEmail });
     if (userExists) {
       return res.status(400).json({ success: false, message: 'User with this email already exists' });
     }
 
+    // create user in database
     const user = await User.create({
       name,
-      email: normalizedEmail,
+      email: cleanEmail,
       password,
       role: role || 'Visitor',
       phone: phone || '',
@@ -183,32 +166,30 @@ const registerUser = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error in registerUser:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * @desc    Auth user & get JWT session token
- * @route   POST /api/auth/login
- * @access  Public
- */
+// 4. login user with email and password
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Please provide email and password' });
+      return res.status(400).json({ success: false, message: 'Please enter email and password' });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
-    const user = await User.findOne({ email: normalizedEmail }).select('+password');
+    const cleanEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: cleanEmail }).select('+password');
 
+    // check user and compare password
     if (!user || !(await user.matchPassword(password))) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
     if (!user.isActive) {
-      return res.status(403).json({ success: false, message: 'Your account has been deactivated' });
+      return res.status(403).json({ success: false, message: 'Account is deactivated' });
     }
 
     res.json({
@@ -224,15 +205,12 @@ const loginUser = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error in loginUser:', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-/**
- * @desc    Get current user profile
- * @route   GET /api/auth/me
- * @access  Private
- */
+// 5. get logged in user profile
 const getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);

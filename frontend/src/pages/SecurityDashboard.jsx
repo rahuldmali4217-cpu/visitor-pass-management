@@ -48,7 +48,7 @@ const SecurityDashboard = () => {
     }
   };
 
-  // 1. Pass code ya QR scan data verify karna (Active/Expired status check karna)
+  // 1. verify pass code or qr scan data
   const handleVerifyCode = async (code) => {
     setLoading(true);
     setMessage(null);
@@ -64,13 +64,13 @@ const SecurityDashboard = () => {
     }
   };
 
-  // 2. Camera QR Scanner se successful scan hone par code verify karna
+  // 2. handle qr code scan callback
   const handleScanSuccess = (code) => {
     setIsScannerOpen(false);
     handleVerifyCode(code);
   };
 
-  // 3. Visitor Check-In: Gate par entry timestamp aur security guard ID log karna
+  // 3. handle visitor check-in
   const handleCheckIn = async () => {
     if (!scannedPass?.data?.passCode) return;
     setLoading(true);
@@ -86,7 +86,7 @@ const SecurityDashboard = () => {
     }
   };
 
-  // 4. Visitor Check-Out: Gate se exit hone par exit time log karna
+  // 4. handle visitor check-out
   const handleCheckOut = async () => {
     if (!scannedPass?.data?.passCode) return;
     setLoading(true);
@@ -102,7 +102,7 @@ const SecurityDashboard = () => {
     }
   };
 
-  // 5. Gate par on-the-spot instant pass issue karna
+  // 5. issue instant pass on the spot
   const handleInstantIssue = async (e) => {
     e.preventDefault();
     try {

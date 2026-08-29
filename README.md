@@ -1,219 +1,181 @@
-# 🎫 Visitor Pass Management System (MERN Stack)
+# Visitor Pass Management System (MERN Stack)
 
-A production-ready, full-stack **Visitor Pass Management System** engineered with the MERN Stack (**MongoDB, Express.js, React, Node.js**). The platform replaces traditional paper registers with a digital check-in architecture featuring **Real-Time OTP Verification**, **Host Approvals**, **Dynamic 2D QR Code Generation & Scanning (Camera + Image Upload)**, **Server-Side PDF Badges**, **Security Gate Check-In/Check-Out Logs**, **RBAC Authentication (Admin, Security, Host, Visitor)**, and **CSV Audit Export**.
+A digital Visitor Pass Management System built using the **MERN stack (MongoDB, Express.js, React.js, Node.js)**. This project digitizes manual visitor entry registers with digital check-ins, OTP verification, host approval workflows, dynamic QR code passes, PDF badge generation, and real-time gate security logging.
 
 ---
 
-## 🌐 Live Production Deployment
+## 📌 Project Overview & Objectives
 
-* **Live Web Application**: [https://visitor-pass-management-z0w5.onrender.com/](https://visitor-pass-management-z0w5.onrender.com/)
-* **Public Pre-Registration Portal**: [https://visitor-pass-management-z0w5.onrender.com/pre-register](https://visitor-pass-management-z0w5.onrender.com/pre-register)
+In many offices, colleges, and buildings, visitors still write their details in manual paper logbooks. This leads to security loopholes, messy logs, and long wait times.
+
+**Main Goals of this Project:**
+1. Allow visitors to pre-register online with OTP verification.
+2. Allow hosts (employees) to approve or reject visit requests.
+3. Automatically generate digital passes with 2D QR codes and downloadable PDF badges.
+4. Provide security guards with a camera QR scanner to log visitor check-ins and check-outs in real time.
+5. Provide administrators with analytics and downloadable CSV reports.
+
+---
+
+## 🚀 Live Demo & Links
+
+* **Live Website**: [https://visitor-pass-management-z0w5.onrender.com/](https://visitor-pass-management-z0w5.onrender.com/)
 * **GitHub Repository**: [https://github.com/rahuldmali4217-cpu/visitor-pass-management](https://github.com/rahuldmali4217-cpu/visitor-pass-management)
-* **HD Demo Video**: [`visitor_pass_demo.webm`](./visitor_pass_demo.webm)
+* **Demo Video**: [`visitor_pass_demo.webm`](./visitor_pass_demo.webm)
 
 ---
 
-## 🔑 Pre-Configured Demo Credentials (Instant 1-Click Login)
+## 🔑 Demo Accounts for Testing
 
-The login portal includes **1-Click Demo Login** buttons for instant role evaluation (All passwords: `password123`):
+The login page includes quick 1-click login buttons for testing each user role (All passwords: `password123`):
 
-| Role | Email | Password | Permissions & Dashboard |
+| Role | Email | Password | What this role can do |
 | :--- | :--- | :--- | :--- |
-| 👑 **Admin** | `admin@example.com` | `password123` | System management, Staff CRUD, Real-time analytics, CSV audit export |
-| 👮 **Security** | `security@example.com` | `password123` | Live WebRTC QR Scanner, Image QR Upload, Instant pass issuance, Gate logs |
-| 🏢 **Host** | `host@example.com` | `password123` | Visitor invitations, Approve/Reject visit requests, Email dispatch with PDF badge |
-| 👤 **Visitor** | `visitor@example.com` | `password123` | View active digital QR passes, Download printable PDF badges |
+| **Admin** | `admin@example.com` | `password123` | System overview, manage staff, view stats, export CSV |
+| **Security** | `security@example.com` | `password123` | QR camera scanner, issue on-the-spot passes, log check-in/out |
+| **Host** | `host@example.com` | `password123` | View visit requests, approve/reject appointments |
+| **Visitor** | `visitor@example.com` | `password123` | View digital pass card, download PDF badge |
 
 ---
 
-## 📸 Application Screenshots
+## 📸 Screenshots of the Running Application
 
-### 1. Multi-Role Authentication & 1-Click Login
+### 1. Login Page & Role-Based Access
 ![Login Screen](./screenshots/01_login_roles.png)
-*Role-Based Access Control (RBAC) login portal with one-click demo credentials.*
+*Authentication screen with JWT support and 1-click demo logins.*
 
 ---
 
-### 2. Visitor Pre-Registration & 2-Step OTP Verification
-![Pre-Registration Form](./screenshots/02_visitor_preregistration_otp.png)
-*Public landing portal with 6-digit cryptographic OTP verification and host selection.*
+### 2. Visitor Pre-Registration & Real OTP Verification
+![Pre-Registration Screen](./screenshots/02_visitor_preregistration_otp.png)
+*Public registration form with 6-digit OTP verification.*
 
 ---
 
-### 3. Host Dashboard & Appointment Approvals
+### 3. Host Dashboard (Approval Workflow)
 ![Host Dashboard](./screenshots/03_host_approval.png)
-*Host portal to review pending requests, approve visits, and auto-dispatch digital passes.*
+*Host portal to review pending visit requests and issue passes.*
 
 ---
 
-### 4. Digital QR Pass & Downloadable PDF Badge
+### 4. Visitor Digital Pass & PDF Badge
 ![Visitor Digital Pass](./screenshots/04_visitor_digital_pass.png)
-*Digital visitor card with dynamic QR code and PDF badge generator.*
+*Digital visitor card with dynamic QR code and printable PDF badge.*
 
 ---
 
-### 5. Security Gate Control & QR Scanner (Camera + File Upload)
+### 5. Security Gate Dashboard & QR Scanner
 ![Security Dashboard](./screenshots/05_security_gate_scanner.png)
-*Real-time front desk verification supporting live camera scanning, QR image upload, and manual code entry.*
+*Front desk portal with WebRTC camera QR scanner, image file upload, and gate logs.*
 
 ---
 
-### 6. Admin Dashboard, Real-Time Analytics & CSV Export
+### 6. Admin Dashboard & CSV Audit Export
 ![Admin Dashboard](./screenshots/06_admin_analytics_reports.png)
-*System metrics (currently inside, total passes, pending requests) with 1-click CSV audit export.*
+*Real-time metrics counters and 1-click CSV audit report export.*
 
 ---
 
-## 🚀 Core Features & Implementation Architecture
+## 🏗️ System Architecture & Database Design
 
-### 1. Real Database-Backed OTP Verification
-- Dedicated `Otp` MongoDB collection with 10-minute TTL indexing.
-- Cryptographically generated 6-digit codes (`crypto.randomInt`).
-- Signed single-use verification tokens prevent spoofing of pre-registration requests.
+The project uses MongoDB with 6 collections:
 
-### 2. Email & SMS Notification Engine
-- **Nodemailer SMTP Integration**: Supports production SMTP (Gmail, Brevo, SendGrid).
-- **Automated Ethereal Sandbox**: When SMTP credentials are not configured, the system automatically creates an Ethereal SMTP test account and outputs clickable preview URLs (`nodemailer.getTestMessageUrl`) for instant inspection.
-- **Event-Driven Notifications**:
-  1. *Pre-Registration*: Dispatches 6-digit OTP code to visitor.
-  2. *Host Approval*: Dispatches digital pass with **attached PDF Badge**.
-  3. *Gate Check-In*: Dispatches real-time arrival alert email/SMS to host.
-
-### 3. Dual-Mode QR Code Verification
-- **Live Camera Scanner**: WebRTC integration via `html5-qrcode` for front desk webcams.
-- **Image File Upload & Scan**: Allows evaluators on desktop PCs without webcams to drag and drop QR badge images directly to verify.
-- **Manual Code Entry**: Quick lookup by `VP-XXXXXX` pass code.
-
-### 4. Server-Side PDF Badge Generation
-- Built with `pdfkit` to generate vectorized, printable visitor badges complete with visitor photo metadata, validity window, host details, and embedded QR code.
-
-### 5. Security Audit Logging & CSV Export
-- Accurate timestamping for gate entries (`CHECKED_IN`) and exits (`CHECKED_OUT`).
-- 1-Click streaming CSV download for compliance and security auditing.
+1. **Users (`models/User.js`)**: Stores registered staff and visitors with encrypted passwords (`bcryptjs`) and roles (`Admin`, `Host`, `Security`, `Visitor`).
+2. **Visitors (`models/Visitor.js`)**: Stores visitor profiles, contact info, and government ID proof types.
+3. **Otp (`models/Otp.js`)**: Stores 6-digit verification codes with a 10-minute MongoDB TTL index for automatic cleanup.
+4. **Appointments (`models/Appointment.js`)**: Stores visit requests, purpose, scheduled time slots, and status (`PENDING`, `APPROVED`, `REJECTED`).
+5. **Passes (`models/Pass.js`)**: Stores approved digital passes, validity windows, and embedded QR code data.
+6. **CheckLogs (`models/CheckLog.js`)**: Stores gate entry and exit timestamps with the guard's user reference.
 
 ---
 
-## 🛠️ Local Setup & Execution Guide
+## 💡 Engineering Challenges & How I Solved Them
 
-### Prerequisites
-- Node.js (v18+)
-- MongoDB (Atlas Cloud URI or Local `mongodb://127.0.0.1:27017`)
+During the development and testing of this project, I ran into several practical problems and solved them:
 
-### 1. Clone & Install
-```bash
-git clone https://github.com/rahuldmali4217-cpu/visitor-pass-management.git
-cd visitor-pass-management
+### 1. Handling Real Email Dispatch in Development
+* **Problem**: Setting up real SMTP credentials in development can trigger spam filters or fail if credentials are missing.
+* **Solution**: I implemented Nodemailer with automatic **Ethereal Mail** fallback. When no custom SMTP is provided, the backend generates an Ethereal test mailbox and prints a clickable preview URL (`nodemailer.getTestMessageUrl`) in the console, making it easy to test without needing real email credentials.
 
-# Install root, backend, and frontend dependencies
-npm run install-all
-```
+### 2. QR Code Scanning on Different Devices
+* **Problem**: Not all evaluators or desktop PCs have a working webcam or browser camera permission enabled.
+* **Solution**: In `QRScannerModal.jsx`, I built dual scanning options: **Live WebRTC Camera Scan** and **QR Image File Upload & Scan** (using `html5-qrcode`), allowing users to upload a screenshot of a pass to verify it instantly.
 
-### 2. Configure Environment Variables
-Copy `.env.example` to `backend/.env`:
-```bash
-cp .env.example backend/.env
-```
+### 3. Preventing Unverified Pre-Registration Submissions
+* **Problem**: Preventing bot submissions on the public pre-registration page.
+* **Solution**: I created an `Otp` schema with a 10-minute TTL expiry in MongoDB. When verified, the backend issues a signed verification token that must be presented when creating the appointment.
 
-Edit `backend/.env` with your settings:
+### 4. Preventing Double Check-Ins
+* **Problem**: A visitor scanning their QR pass twice without checking out could create corrupt attendance records.
+* **Solution**: Before creating a `CHECKED_IN` record, `checkLogController.js` checks if there is already an active check-in for that pass.
+
+---
+
+## ⚙️ Environment Variables Setup
+
+Create a `.env` file in the `backend/` directory:
+
 ```env
 PORT=5000
 NODE_ENV=development
-MONGO_URI=mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/visitor_pass_db?retryWrites=true&w=majority
-JWT_SECRET=supersecretvisitorpasskey12345
+MONGO_URI=mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/visitor_pass_db?retryWrites=true&w=majority
+JWT_SECRET=my_custom_secret_key_2026
 CLIENT_URL=http://localhost:5173
-```
 
-### 3. Seed Database & Run
-```bash
-# Seed initial demo accounts & records
-npm run seed --prefix backend
-
-# Start Backend & Frontend concurrently
-npm run build
-npm start
+# Optional: Real SMTP email settings (Ethereal test sandbox used automatically if omitted)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password
 ```
-- **Frontend App**: `http://localhost:5173` (or `http://localhost:5000` in production mode)
-- **Backend API**: `http://localhost:5000`
 
 ---
 
-## 🧪 Automated Testing Suite
+## 🛠️ How to Run Locally
 
-Run the end-to-end integration test suite verifying all 6 test groups (Auth, OTP, Pre-registration, Passes, QR verification, Check logs, CSV export):
+### 1. Install Dependencies
+```bash
+# Install root, backend, and frontend packages
+npm run install-all
+```
+
+### 2. Seed Demo Accounts
+```bash
+cd backend
+npm run seed
+cd ..
+```
+
+### 3. Start the Application
+```bash
+# Run both frontend and backend
+npm run build
+npm start
+```
+* **Frontend**: `http://localhost:5173` (or `http://localhost:5000` in production)
+* **Backend**: `http://localhost:5000`
+
+---
+
+## 🧪 Running Automated Tests
+
+I wrote an integration test suite in `backend/tests/e2e.test.js` to test the full system lifecycle:
 
 ```bash
 npm test
 ```
 
-### Sample Test Output:
-```text
-======================================================
-🚀 VISITOR PASS MANAGEMENT SYSTEM - E2E TEST SUITE
-======================================================
-
-[TEST DB] Connecting to database...
-✅ Connected to MongoDB successfully.
-
---- TEST GROUP 1: System Health ---
-  ✅ PASS: GET /api/health returns 200 online
-
---- TEST GROUP 2: Authentication & RBAC ---
-  ✅ PASS: Register Admin returns JWT token
-  ✅ PASS: Register Host returns user ID
-  ✅ PASS: Login with valid credentials succeeds
-  ✅ PASS: GET /api/auth/me verifies JWT session
-
---- TEST GROUP 3: Real Database-Backed OTP Verification ---
-[EMAIL DISPATCHED] To: visitor@example.com | Subject: "Your Verification Code: 458452"
-📨 [Ethereal Preview URL]: https://ethereal.email/message/...
-  ✅ PASS: POST /api/auth/send-otp dispatches OTP
-  ✅ PASS: OTP code stored in MongoDB with 10-minute TTL
-  ✅ PASS: Verify with invalid OTP returns 400 rejection
-  ✅ PASS: Verify with correct OTP returns signed verificationToken
-
---- TEST GROUP 4: Pre-Registration & Pass Issuance ---
-  ✅ PASS: Public pre-registration creates PENDING appointment
-  ✅ PASS: Host approval creates active Pass with PassCode
-
---- TEST GROUP 5: QR Verification & Gate Access Logging ---
-  ✅ PASS: Pass VP-KJJKT6 verified as VALID
-  ✅ PASS: Security check-in logs entry time and marks CHECKED_IN
-  ✅ PASS: Duplicate check-in blocked when visitor is already inside
-  ✅ PASS: Security check-out logs exit timestamp
-
---- TEST GROUP 6: System Analytics & CSV Audit ---
-  ✅ PASS: Analytics dashboard returns calculated counters
-  ✅ PASS: Export CSV returns downloadable audit log spreadsheet
-
-======================================================
-📊 TEST SUMMARY: 17 Passed | 0 Failed
-======================================================
-```
+**Test Coverage (17 Tests across 6 Groups):**
+- ✅ System health check
+- ✅ User registration & JWT authentication
+- ✅ Real database-backed OTP generation & verification
+- ✅ Pre-registration & Host approval workflow
+- ✅ QR code verification & Gate Check-In/Check-Out
+- ✅ Real-time analytics counters & CSV audit export
 
 ---
 
-## ⚙️ Environment Variables Reference
+## 📝 Known Limitations
 
-| Variable | Required | Description | Default / Example |
-| :--- | :---: | :--- | :--- |
-| `PORT` | Optional | Backend server port | `5000` |
-| `NODE_ENV` | Yes | Environment mode (`development` / `production`) | `production` |
-| `MONGO_URI` | Yes | MongoDB Atlas Connection String | `mongodb+srv://...` |
-| `JWT_SECRET` | Yes | Secret key for signing JWT tokens | `min_32_char_secret` |
-| `CLIENT_URL` | Optional | Frontend application URL | `http://localhost:5173` |
-| `SMTP_HOST` | Optional | Production SMTP host (e.g. `smtp.gmail.com`) | Ethereal sandbox used if omitted |
-| `SMTP_PORT` | Optional | SMTP port | `587` |
-| `SMTP_USER` | Optional | SMTP authentication username | `your_email@gmail.com` |
-| `SMTP_PASS` | Optional | SMTP app password | `your_app_password` |
-| `EMAIL_FROM` | Optional | Sender email header | `"Visitor Pass" <noreply@visitorpass.com>` |
-
----
-
-## 🔍 Honest Disclosure & Known Limitations
-
-To provide complete transparency for evaluation and production deployment:
-
-1. **Email Deliverability in Free Sandbox**: When `SMTP_USER` and `SMTP_PASS` are omitted in `.env`, the system dispatches real SMTP emails using **Ethereal Mail** (an official Nodemailer testing service). Ethereal outputs a real, clickable preview URL in server logs and UI rather than landing in a real inbox, avoiding spam flag penalties during evaluation.
-2. **Camera Access Requirements**: The WebRTC live camera scanner (`html5-qrcode`) requires an `HTTPS` connection or `localhost` due to browser security restrictions. For evaluators testing on HTTP IP addresses or devices without webcams, the **Image File Upload & Scan** option should be used.
-3. **SMS Gateway Sandbox**: SMS messages log to the system gateway sandbox unless Twilio environment variables (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`) are populated.
-4. **Single-Instance Database State**: For distributed multi-instance clustering, Redis can be introduced for rate limiting and session blacklisting beyond JWT expiration.
+1. **Camera Permissions**: Live camera scanning requires `HTTPS` or `localhost` due to WebRTC security policies. On plain HTTP remote connections, use the "Upload QR Image" tab.
+2. **Email Sandbox**: Without custom SMTP configured in `.env`, emails are sent through the Ethereal testing sandbox and generate preview URLs.
