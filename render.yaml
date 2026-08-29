@@ -3,7 +3,7 @@ services:
     name: visitor-pass-management
     env: node
     plan: free
-    buildCommand: npm install && npm --prefix frontend install && npm --prefix frontend run build
+    buildCommand: npm install && npm --prefix frontend install --include=dev && npm --prefix frontend run build
     startCommand: node backend/server.js
     envVars:
       - key: NODE_ENV

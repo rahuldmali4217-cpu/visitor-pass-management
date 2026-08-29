@@ -4,7 +4,7 @@
   "description": "Production MERN Stack Visitor Pass Management System",
   "main": "backend/server.js",
   "scripts": {
-    "build": "npm install && npm --prefix frontend install && npm --prefix frontend run build",
+    "build": "npm install && npm --prefix frontend install --include=dev && npm --prefix frontend run build",
     "start": "node backend/server.js",
     "test": "node backend/tests/e2e.test.js"
   },
